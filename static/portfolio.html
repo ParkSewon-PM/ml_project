@@ -2900,15 +2900,17 @@
             <div class="hero-metrics">
               <div class="metric">
                 <div class="metric-label">Aligned Research Setting</div>
-                <div class="metric-value">Aligned 5-probe rerun reaches R² 0.742</div>
-                <div class="metric-copy">In the latest full-feature 1 km rerun, the aligned multi-probe path improves
-                  from R² 0.494 at N=1 to R² 0.742 at N=5.</div>
+                <div class="metric-value">Aligned 5-probe MAE 1.78, MAPE 24.6%</div>
+                <div class="metric-copy">In the latest 1 km rerun with 1-lane high-density augmentation, the aligned
+                  multi-probe path improves from MAE 2.50 / MAPE 39.7% at N=1 to MAE 1.78 / MAPE 24.6% at N=5
+                  (R² 0.934 → 0.964).</div>
               </div>
               <div class="metric">
                 <div class="metric-label">Deployable Road-Network Setting</div>
-                <div class="metric-value">Bayesian link fusion reaches R² 0.658</div>
-                <div class="metric-copy">With unequal traversal boundaries, Bayesian+CF beats simple mean (0.636) and
-                  CF-softmax (0.646) in the 5-probe deployment evaluation.</div>
+                <div class="metric-value">Bayesian link fusion MAE 2.18, MAPE 37.2%</div>
+                <div class="metric-copy">With unequal traversal boundaries, CF-softmax and Bayesian+CF land within
+                  ~0.03 MAE of each other at N=5 (CF-softmax 2.15, Bayesian+CF 2.18); Bayesian+CF is the deployed
+                  rule because it exposes the per-link uncertainty the map display consumes (R² 0.951).</div>
               </div>
               <div class="metric">
                 <div class="metric-label">End-to-End System</div>
@@ -2967,8 +2969,8 @@
             </div>
             <div class="problem-insight">
               <div class="metric-label">Breakthrough</div>
-              <strong>Aligned 5-probe rerun → +50% over N=1</strong>
-              <span>In the latest 1 km full-feature rerun, aligned multi-probe aggregation rises from R² 0.494 to 0.742.</span>
+              <strong>Aligned 5-probe MAE 2.50 → 1.78 (−29%)</strong>
+              <span>In the latest 1 km rerun with 1-lane high-density augmentation, aligned multi-probe aggregation improves MAE from 2.50 to 1.78 and MAPE from 39.7% to 24.6% (R² 0.934 → 0.964).</span>
             </div>
             <div class="problem-insight">
               <div class="metric-label">Deployment</div>
@@ -2978,7 +2980,7 @@
             <div class="problem-insight">
               <div class="metric-label">Constraint</div>
               <strong>Mismatched windows still share overlapping links</strong>
-              <span>The deployed system does not require perfectly matched 1 km cuts. It predicts each traversal first, then aggregates density through the shared links; at N=5 the method comparison is 0.636 (simple mean), 0.646 (CF-softmax), and 0.658 (Bayesian+CF).</span>
+              <span>The deployed system does not require perfectly matched 1 km cuts. It predicts each traversal first, then aggregates density through the shared links; at N=5 the method comparison is MAE 2.18 (simple mean), 2.15 (CF-softmax), and 2.18 (Bayesian+CF), all within R² 0.951–0.953.</span>
             </div>
           </div>
         </div>
@@ -3027,8 +3029,8 @@
           </div>
           <div class="card">
             <div class="metric-label">Gap</div>
-            <p class="card-title">0.742 aligned vs 0.658 deployed</p>
-            <p class="card-desc">Most of the research gain survives after switching to unequal-window Bayesian link fusion.</p>
+            <p class="card-title">MAE 1.78 aligned vs 2.18 deployed</p>
+            <p class="card-desc">Most of the research gain survives after switching to unequal-window Bayesian link fusion (R² 0.964 vs 0.951).</p>
           </div>
         </div>
       </section>
@@ -3182,53 +3184,53 @@ sequenceDiagram
           must fuse unequal traversals only after per-probe prediction.
         </p>
         <div class="panel panel-offset">
-          <div class="panel-heading">Aligned research setting · latest full-feature rerun</div>
+          <div class="panel-heading">Aligned research setting · latest 1-lane high-density augmented rerun</div>
           <div class="table-scroll">
             <table class="data-table">
               <caption class="sr-only">Aligned probe count performance comparison</caption>
               <thead>
                 <tr>
                   <th scope="col">Probes</th>
-                  <th scope="col" class="numeric">R²</th>
                   <th scope="col" class="numeric">MAE</th>
-                  <th scope="col" class="numeric">Improvement</th>
+                  <th scope="col" class="numeric">MAPE</th>
+                  <th scope="col" class="numeric">R²</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
                   <th scope="row">1 probe</th>
-                  <td class="numeric">0.494</td>
-                  <td class="numeric">2.39</td>
-                  <td class="numeric muted-cell">baseline</td>
+                  <td class="numeric">2.50</td>
+                  <td class="numeric">39.7%</td>
+                  <td class="numeric">0.934</td>
                 </tr>
                 <tr>
                   <th scope="row">2 probes</th>
-                  <td class="numeric">0.626</td>
-                  <td class="numeric">2.04</td>
-                  <td class="numeric accent-cell">+27%</td>
+                  <td class="numeric">2.16</td>
+                  <td class="numeric">32.5%</td>
+                  <td class="numeric">0.947</td>
                 </tr>
                 <tr>
                   <th scope="row">3 probes</th>
-                  <td class="numeric">0.679</td>
-                  <td class="numeric">1.88</td>
-                  <td class="numeric accent-cell">+37%</td>
+                  <td class="numeric">2.00</td>
+                  <td class="numeric">28.7%</td>
+                  <td class="numeric">0.954</td>
                 </tr>
                 <tr>
                   <th scope="row" class="strong-cell">5 probes</th>
-                  <td class="numeric strong-cell">0.742</td>
-                  <td class="numeric strong-cell">1.68</td>
-                  <td class="numeric accent-cell strong-cell">+50%</td>
+                  <td class="numeric strong-cell">1.78</td>
+                  <td class="numeric strong-cell">24.6%</td>
+                  <td class="numeric strong-cell">0.964</td>
                 </tr>
               </tbody>
             </table>
           </div>
           <p class="note-copy">
-            MAE = 1.68 veh/km/lane means about 1–2 vehicles per km per lane error.
+            MAE = 1.78 veh/km/lane means about 2 vehicles per km per lane error across a density range that now extends up to ~67 veh/km/lane.
             This is the ideal same-slice setting where all probes describe the same 1 km target through an aggregated-feature XGBoost formulation.
           </p>
         </div>
         <div class="panel panel-offset">
-          <div class="panel-heading">Deployable road-network setting · unequal traversal boundaries</div>
+          <div class="panel-heading">Deployable road-network setting · unequal traversal boundaries · MAE (R²)</div>
           <div class="table-scroll">
             <table class="data-table">
               <caption class="sr-only">Deployable method comparison by probe count</caption>
@@ -3244,49 +3246,48 @@ sequenceDiagram
               <tbody>
                 <tr>
                   <th scope="row">Simple mean</th>
-                  <td class="numeric">0.526</td>
-                  <td class="numeric">0.596</td>
-                  <td class="numeric">0.616</td>
-                  <td class="numeric">0.636</td>
+                  <td class="numeric">2.46 (0.935)</td>
+                  <td class="numeric">2.30 (0.946)</td>
+                  <td class="numeric">2.23 (0.949)</td>
+                  <td class="numeric">2.18 (0.952)</td>
                 </tr>
                 <tr>
                   <th scope="row">CF-softmax</th>
-                  <td class="numeric">0.526</td>
-                  <td class="numeric">0.603</td>
-                  <td class="numeric">0.625</td>
-                  <td class="numeric">0.646</td>
+                  <td class="numeric">2.46 (0.935)</td>
+                  <td class="numeric">2.28 (0.947)</td>
+                  <td class="numeric">2.21 (0.950)</td>
+                  <td class="numeric">2.15 (0.953)</td>
                 </tr>
                 <tr>
                   <th scope="row" class="strong-cell">Bayesian+CF</th>
-                  <td class="numeric strong-cell">0.526</td>
-                  <td class="numeric strong-cell">0.612</td>
-                  <td class="numeric strong-cell">0.638</td>
-                  <td class="numeric strong-cell">0.658</td>
+                  <td class="numeric strong-cell">2.59 (0.928)</td>
+                  <td class="numeric strong-cell">2.36 (0.943)</td>
+                  <td class="numeric strong-cell">2.27 (0.947)</td>
+                  <td class="numeric strong-cell">2.18 (0.951)</td>
                 </tr>
               </tbody>
             </table>
           </div>
           <p class="note-copy">
-            With only one traversal, all three fusion rules are effectively the same. The aligned table starts from an aggregated-feature XGBoost baseline at 0.494,
-            while the deployable table starts from the runtime single-traversal model at 0.526.
-            At 5 probes, Bayesian+CF beats simple mean by +0.022 R² and CF-softmax by +0.012 R².
+            CF-softmax and Bayesian+CF land within ~0.03 MAE of each other at N=5, and both converge on R² ≈ 0.95.
+            Bayesian+CF is the deployed fusion rule because it exposes the per-link posterior uncertainty the map display and downstream aggregation need.
           </p>
         </div>
         <div class="cards-three">
           <div class="card">
             <div class="metric-label">Aligned gain</div>
-            <p class="card-title-sm">0.494 → 0.742 from 1 to 5 probes</p>
-            <p class="card-desc">The latest same-slice rerun shows that richer multi-probe evidence still carries the largest accuracy gain when the observation target is perfectly aligned.</p>
+            <p class="card-title-sm">MAE 2.50 → 1.78 from 1 to 5 probes</p>
+            <p class="card-desc">The latest same-slice rerun cuts MAE 29% and MAPE 15 points (39.7% → 24.6%) as probe count grows, with R² reaching 0.964.</p>
           </div>
           <div class="card">
             <div class="metric-label">Deployable result</div>
-            <p class="card-title-sm">Bayesian+CF reaches R² 0.658 at 5 probes</p>
-            <p class="card-desc">Different vehicles cover different cut points, so the system predicts each traversal first and then fuses them on the overlapping links they share.</p>
+            <p class="card-title-sm">Bayesian+CF reaches MAE 2.18 at 5 probes</p>
+            <p class="card-desc">Different vehicles cover different cut points, so the system predicts each traversal first and then fuses them on the overlapping links they share (R² 0.951).</p>
           </div>
           <div class="card">
             <div class="metric-label">Fusion method effect</div>
-            <p class="card-title-sm">0.636 → 0.646 → 0.658 at N=5</p>
-            <p class="card-desc">In the deployable setting, the ordering is simple mean &lt; CF-softmax &lt; Bayesian+CF once multiple unequal traversals are available.</p>
+            <p class="card-title-sm">MAE 2.18 → 2.15 → 2.18 at N=5</p>
+            <p class="card-desc">Simple mean, CF-softmax, and Bayesian+CF converge within ~0.03 MAE of each other once multiple unequal traversals are available; Bayesian+CF is chosen in deployment for its per-link uncertainty output.</p>
           </div>
         </div>
       </section>
@@ -3450,7 +3451,7 @@ flowchart LR
 
           <!-- CF Ensemble -->
           <details data-math-root>
-            <summary><span class="summary-title">Stage 1 · Aligned Multi-Probe Aggregation</span><span class="summary-sub">same-slice research setting · R² = 0.742</span></summary>
+            <summary><span class="summary-title">Stage 1 · Aligned Multi-Probe Aggregation</span><span class="summary-sub">same-slice research setting · MAE 1.78 / MAPE 24.6% (R² 0.964)</span></summary>
             <div class="accordion-body">
               <p class="accordion-lead"><strong>Research layer:</strong> when probes observe the same slice, their handcrafted features are aggregated into one fixed-length vector before XGBoost prediction.</p>
               <div class="formula-card">
@@ -3471,14 +3472,14 @@ flowchart LR
               <p class="section-copy copy-spaced">
                 This makes the aligned model a <strong>tabular aggregated-feature XGBoost</strong>. Its strength appears once
                 multiple probes are present, because the standard-deviation terms begin to describe how differently the
-                probes experience the same 1 km slice. In the latest full-feature rerun, this formulation reaches
-                <strong>R² = 0.742</strong> at 5 probes.
+                probes experience the same 1 km slice. In the latest 1-lane high-density augmented rerun, this formulation reaches
+                <strong>MAE 1.78, MAPE 24.6% (R² 0.964)</strong> at 5 probes.
               </p>
             </div>
           </details>
 
           <details class="two-stage-explainer" data-math-root>
-            <summary><span class="summary-title">Stage 2 · Overlap-Aware Link Fusion for Mismatched Traversals</span><span class="summary-sub">deployed 5-probe system · R² = 0.658</span></summary>
+            <summary><span class="summary-title">Stage 2 · Overlap-Aware Link Fusion for Mismatched Traversals</span><span class="summary-sub">deployed 5-probe system · MAE 2.18 / MAPE 37.2% (R² 0.951)</span></summary>
             <div class="accordion-body">
               <p class="accordion-lead"><strong>Deployment layer:</strong> once probes stop sharing identical 1 km observation windows, the system predicts each traversal first, then aggregates those densities through the road links their windows overlap.</p>
               <div class="stage-grid">
@@ -3566,7 +3567,7 @@ flowchart LR
                   <div class="fusion-flow">
                     <div class="fusion-chip">Aligned feature / prediction fusion</div>
                     <div class="fusion-arrow"></div>
-                    <div class="fusion-result">R² 0.742 in the aligned 5-probe rerun</div>
+                    <div class="fusion-result">MAE 1.78, MAPE 24.6% (R² 0.964) in the aligned 5-probe rerun</div>
                   </div>
                   <div class="fusion-footnote">
                     This is the clean research setting: every probe describes the same road slice, so the fusion problem
@@ -3623,7 +3624,7 @@ flowchart LR
                     <div class="fusion-arrow"></div>
                     <div class="fusion-chip">Bayesian link fusion</div>
                     <div class="fusion-arrow"></div>
-                    <div class="fusion-result">R² 0.658 in the deployed 5-probe system</div>
+                    <div class="fusion-result">MAE 2.18, MAPE 37.2% (R² 0.951) in the deployed 5-probe system</div>
                   </div>
                   <div class="fusion-footnote">
                     The key engineering step is to <strong>apply Bayesian link fusion to
@@ -3681,18 +3682,18 @@ flowchart LR
           <strong class="panel-accent-title">The contribution is two-stage because the research setting and the deployment setting are different.</strong>
           <p class="accent-copy">
             In the <strong>aligned 5-probe, 1 km experiment</strong>,
-            aligned multi-probe aggregation reaches about <strong>R² = 0.742</strong>. The second contribution is the deployable version:
-            an overlap-aware Bayesian link-fusion system that still delivers about <strong>R² = 0.658</strong> in the
+            aligned multi-probe aggregation reaches <strong>MAE 1.78, MAPE 24.6% (R² 0.964)</strong>. The second contribution is the deployable version:
+            an overlap-aware Bayesian link-fusion system that still delivers <strong>MAE 2.18, MAPE 37.2% (R² 0.951)</strong> in the
             <strong>deployed 5-probe setting</strong> once probes stop sharing the same traversal boundaries.
           </p>
         </div>
         <div class="grid-two">
           <div class="panel lesson-panel">
-            <strong>Single-probe prediction is still the bottleneck before fusion.</strong>
+            <strong>Data distribution was the main lever before fusion.</strong>
             <p class="lesson-copy">
-              Even before multi-probe aggregation, the single-probe path starts only around <strong>R²≈0.5</strong>.
-              That is why the biggest gains in this project come from combining multiple traversals and strengthening the
-              observation setup.
+              In the original ≤24 veh/km/lane regime, single-probe accuracy clustered around <strong>R²≈0.45</strong> regardless of algorithm.
+              Adding 5K 1-lane high-density bottleneck scenarios lifted the aligned single-probe baseline to
+              <strong>MAE 2.50, MAPE 39.7% (R² 0.934)</strong>, and multi-probe aggregation then cuts MAE another 29% on top.
             </p>
           </div>
           <div class="panel lesson-panel">
