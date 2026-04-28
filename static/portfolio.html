@@ -2859,18 +2859,6 @@
       </div>
     </nav>
 
-    <nav class="section-nav" id="sectionNav" aria-label="Section navigation">
-      <a href="#hero" class="active" aria-current="location">Overview</a>
-      <a href="#problem">Problem</a>
-      <a href="#approach">Approach</a>
-      <a href="#architecture">Architecture</a>
-      <a href="#realtime">Real-Time</a>
-      <a href="#pipeline">Pipeline</a>
-      <a href="#results">Results</a>
-      <a href="#engineering">Engineering</a>
-      <a href="#lessons">Lessons</a>
-      <a href="#explore">Explore</a>
-    </nav>
 
     <main id="mainContent">
 
@@ -3825,13 +3813,16 @@ flowchart LR
 
   <script>
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const navLinks = [...document.querySelectorAll('.section-nav a')];
+    const navLinks = [...document.querySelectorAll('.top-nav .nav-links a[href^="#"]')];
     const sections = [...document.querySelectorAll('section[id]')];
-    const navBar = document.getElementById('sectionNav');
+    const navBar = document.querySelector('.top-nav .nav-links');
     const resources = new Map();
     let activeSectionId = '';
 
     const revealActiveLink = (id) => {
+      if (!navBar) {
+        return;
+      }
       const active = navBar.querySelector(`a[href="#${id}"]`);
       if (!active) {
         return;
