@@ -122,7 +122,7 @@ app = FastAPI(
         "- **EnsembleResult**: multi-probe aggregation per link (15-min rolling window)\n"
         "- **FCDRecordRow**: raw GPS + accelerometer records at 1 Hz\n"
     ),
-    version="0.5.0",
+    version="0.5.1",
     lifespan=lifespan,
 )
 
