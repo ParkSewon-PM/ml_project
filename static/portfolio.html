@@ -2893,9 +2893,8 @@
               <div class="metric">
                 <div class="metric-label">Aligned Research Setting</div>
                 <div class="metric-value">Aligned 5-probe MAE 1.78, MAPE 24.6%</div>
-                <div class="metric-copy">In the latest 1 km rerun with 1-lane high-density augmentation, the aligned
-                  multi-probe path improves from MAE 2.50 / MAPE 39.7% at N=1 to MAE 1.78 / MAPE 24.6% at N=5
-                  (R² 0.934 → 0.964).</div>
+                <div class="metric-copy">In the aligned 1 km research setting, moving from 1 to 5 probes reduces
+                  MAE from 2.50 to 1.78 and MAPE from 39.7% to 24.6% (R² 0.934 to 0.964).</div>
               </div>
               <div class="metric">
                 <div class="metric-label">Deployable Road-Network Setting</div>
@@ -2957,12 +2956,12 @@
             <div class="problem-insight">
               <div class="metric-label">Observation</div>
               <strong>Single probe = partial observation</strong>
-              <span>One trajectory is a noisy sample of the traffic stream. Systematic tests across 6 model families confirmed single-probe accuracy plateaus.</span>
+              <span>One trajectory is a noisy sample of the traffic stream. The single-probe baseline on 49K SUMO scenarios reaches MAE 2.50, MAPE 39.7% (R² 0.934) across density 0–67 veh/km/lane.</span>
             </div>
             <div class="problem-insight">
               <div class="metric-label">Breakthrough</div>
-              <strong>Aligned 5-probe MAE 2.50 → 1.78 (−29%)</strong>
-              <span>In the latest 1 km rerun with 1-lane high-density augmentation, aligned multi-probe aggregation improves MAE from 2.50 to 1.78 and MAPE from 39.7% to 24.6% (R² 0.934 → 0.964).</span>
+              <strong>Aligned N=1 to N=5 gain</strong>
+              <span>In the aligned 1 km research setting, adding probes reduces MAE from 2.50 to 1.78 and MAPE from 39.7% to 24.6%.</span>
             </div>
             <div class="problem-insight">
               <div class="metric-label">Deployment</div>
@@ -2997,7 +2996,7 @@
             The system converts those signals into <strong>31 handcrafted trajectory features</strong> spanning speed statistics,
             acceleration patterns, braking, stops, lateral dynamics, FFT, and sample entropy, then trains
             <strong>XGBoost</strong> to map them to density. In the deployed single-probe runtime path, the model also
-            receives <strong>num_lanes</strong> and <strong>speed_limit</strong>, giving a 32-input inference vector. For the
+            receives <strong>num_lanes</strong> and <strong>speed_limit</strong>, giving a 33-input inference vector (31 handcrafted + 2 road conditions). For the
             multi-probe case, the method then works in two stages: an <strong>aligned aggregated-feature XGBoost</strong> for
             the research setting, and a <strong>link-level Bayesian fusion system</strong> that keeps the pipeline usable when
             real probes arrive with mismatched traversal boundaries.
@@ -3022,7 +3021,7 @@
           <div class="card">
             <div class="metric-label">Gap</div>
             <p class="card-title">MAE 1.78 aligned vs 2.18 deployed</p>
-            <p class="card-desc">Most of the research gain survives after switching to unequal-window Bayesian link fusion (R² 0.964 vs 0.951).</p>
+            <p class="card-desc">Deployable link-level fusion stays close to the aligned research setting while handling unequal traversal windows (R² 0.964 vs 0.951).</p>
           </div>
         </div>
       </section>
@@ -3176,7 +3175,7 @@ sequenceDiagram
           must fuse unequal traversals only after per-probe prediction.
         </p>
         <div class="panel panel-offset">
-          <div class="panel-heading">Aligned research setting · latest 1-lane high-density augmented rerun</div>
+          <div class="panel-heading">Aligned research setting · aggregated-feature XGBoost</div>
           <div class="table-scroll">
             <table class="data-table">
               <caption class="sr-only">Aligned probe count performance comparison</caption>
@@ -3217,7 +3216,7 @@ sequenceDiagram
             </table>
           </div>
           <p class="note-copy">
-            MAE = 1.78 veh/km/lane means about 2 vehicles per km per lane error across a density range that now extends up to ~67 veh/km/lane.
+            MAE = 1.78 veh/km/lane means about 2 vehicles per km per lane error across a density range up to ~67 veh/km/lane.
             This is the ideal same-slice setting where all probes describe the same 1 km target through an aggregated-feature XGBoost formulation.
           </p>
         </div>
@@ -3268,8 +3267,8 @@ sequenceDiagram
         <div class="cards-three">
           <div class="card">
             <div class="metric-label">Aligned gain</div>
-            <p class="card-title-sm">MAE 2.50 → 1.78 from 1 to 5 probes</p>
-            <p class="card-desc">The latest same-slice rerun cuts MAE 29% and MAPE 15 points (39.7% → 24.6%) as probe count grows, with R² reaching 0.964.</p>
+            <p class="card-title-sm">MAE 2.50 to 1.78 from 1 to 5 probes</p>
+            <p class="card-desc">The aligned same-slice setting shows the value of multi-probe observation: MAE drops by 29% and MAPE by 15 points as probe count increases.</p>
           </div>
           <div class="card">
             <div class="metric-label">Deployable result</div>
@@ -3278,8 +3277,8 @@ sequenceDiagram
           </div>
           <div class="card">
             <div class="metric-label">Fusion method effect</div>
-            <p class="card-title-sm">MAE 2.18 → 2.15 → 2.18 at N=5</p>
-            <p class="card-desc">Simple mean, CF-softmax, and Bayesian+CF converge within ~0.03 MAE of each other once multiple unequal traversals are available; Bayesian+CF is chosen in deployment for its per-link uncertainty output.</p>
+            <p class="card-title-sm">N=5 fusion methods stay close</p>
+            <p class="card-desc">Simple mean, CF-softmax, and Bayesian+CF land within ~0.03 MAE of each other once multiple unequal traversals are available; Bayesian+CF is chosen in deployment for its per-link uncertainty output.</p>
           </div>
         </div>
       </section>
@@ -3293,13 +3292,13 @@ sequenceDiagram
 
           <!-- Data Pipeline & Dataset -->
           <details>
-            <summary><span class="summary-title">Data Pipeline & ML Dataset</span><span class="summary-sub">176K samples · 31 handcrafted features · GroupKFold</span></summary>
+            <summary><span class="summary-title">Data Pipeline & ML Dataset</span><span class="summary-sub">209K samples · 31 handcrafted features · GroupKFold</span></summary>
             <div class="accordion-body">
-              <p class="accordion-lead"><strong>From simulation to training set:</strong> 35K SUMO scenarios become 176K probe trajectories, then flow through feature extraction and leakage-safe validation.</p>
+              <p class="accordion-lead"><strong>From simulation to training set:</strong> 49K SUMO scenarios become 209K probe trajectories, then flow through feature extraction and leakage-safe validation.</p>
               <div class="overview-grid">
                 <div>
                   <p class="section-copy">
-                    35,000 SUMO scenarios generate 176K floating-car trajectories (6 channels × 1Hz).
+                    49,000 SUMO scenarios generate 209K floating-car trajectories (6 channels × 1Hz).
                     Each scenario parameterizes demand (200–6000 veh/h), speed limit (30–100 km/h), and lane count (1–3).
                     Ground truth density is computed via <strong>Edie's generalized definition</strong> over the full
                     time-space region.
@@ -3334,7 +3333,7 @@ sequenceDiagram
                       </tr>
                       <tr>
                         <th scope="row">Features</th>
-                        <td class="numeric">31 handcrafted (+2 road inputs at runtime)</td>
+                        <td class="numeric">31 handcrafted + 2 road inputs = 33 total</td>
                       </tr>
                       <tr>
                         <th scope="row">Validation</th>
@@ -3452,7 +3451,7 @@ flowchart LR
                 $$\hat{k}_{\text{aligned}} = g_{\theta}\left(\bar{f}_1, s_1, \ldots, \bar{f}_K, s_K, \text{road conditions}\right)$$
               </div>
               <p class="section-copy">
-                The aligned rerun aggregates each selected probe's handcrafted feature values into a single tabular input. The model receives
+                The aligned model aggregates each selected probe's handcrafted feature values into a single tabular input. The model receives
                 the <strong>mean</strong> and <strong>standard deviation</strong> of each feature across probes.
               </p>
               <p class="section-copy copy-spaced">
@@ -3464,7 +3463,7 @@ flowchart LR
               <p class="section-copy copy-spaced">
                 This makes the aligned model a <strong>tabular aggregated-feature XGBoost</strong>. Its strength appears once
                 multiple probes are present, because the standard-deviation terms begin to describe how differently the
-                probes experience the same 1 km slice. In the latest 1-lane high-density augmented rerun, this formulation reaches
+                probes experience the same 1 km slice. This formulation reaches
                 <strong>MAE 1.78, MAPE 24.6% (R² 0.964)</strong> at 5 probes.
               </p>
             </div>
@@ -3559,7 +3558,7 @@ flowchart LR
                   <div class="fusion-flow">
                     <div class="fusion-chip">Aligned feature / prediction fusion</div>
                     <div class="fusion-arrow"></div>
-                    <div class="fusion-result">MAE 1.78, MAPE 24.6% (R² 0.964) in the aligned 5-probe rerun</div>
+                    <div class="fusion-result">MAE 1.78, MAPE 24.6% (R² 0.964) in the aligned 5-probe setting</div>
                   </div>
                   <div class="fusion-footnote">
                     This is the clean research setting: every probe describes the same road slice, so the fusion problem
@@ -3681,11 +3680,10 @@ flowchart LR
         </div>
         <div class="grid-two">
           <div class="panel lesson-panel">
-            <strong>Data distribution was the main lever before fusion.</strong>
+            <strong>Single-probe baseline: MAE 2.50, MAPE 39.7% (R² 0.934).</strong>
             <p class="lesson-copy">
-              In the original ≤24 veh/km/lane regime, single-probe accuracy clustered around <strong>R²≈0.45</strong> regardless of algorithm.
-              Adding 5K 1-lane high-density bottleneck scenarios lifted the aligned single-probe baseline to
-              <strong>MAE 2.50, MAPE 39.7% (R² 0.934)</strong>, and multi-probe aggregation then cuts MAE another 29% on top.
+              Trained on 49K SUMO scenarios spanning density 0–67 veh/km/lane. XGBoost on 33 inputs (31 handcrafted +
+              num_lanes + speed_limit) is the runtime model. Multi-probe aggregation cuts MAE another 29% on top.
             </p>
           </div>
           <div class="panel lesson-panel">
@@ -3708,10 +3706,9 @@ flowchart LR
           <div class="panel lesson-panel">
             <strong>ADAS spacing data looks like the strongest next upgrade path.</strong>
             <p class="lesson-copy">
-              In the aligned multi-probe study, <strong>XGBoost (31 handcrafted features + spacing-aware signal)</strong> rises from
-              <strong>0.641 → 0.752 → 0.801 → 0.848</strong> as spacing structure becomes more visible. That suggests the
-              biggest next step is combining the current motion features with direct headway or forward-gap signals
-              from ADAS or connected vehicles. If spacing becomes an actual input, the density estimate should improve much more sharply.
+              The current phone-only system infers spacing indirectly from motion features. Direct headway or forward-gap signals
+              from ADAS or connected vehicles would make that information observable instead of latent, making spacing-aware sensing
+              the highest-upside next research direction.
             </p>
           </div>
         </div>

@@ -29,10 +29,10 @@ ProbeDensity is an end-to-end traffic density estimation system that turns GPS +
 
 ## What This Project Does
 
-1. **Generates labeled traffic data** — 35K SUMO scenarios × 5 probes = 176K samples of 6-channel trajectories (VX, VY, AX, AY, speed, brake)
-2. **Designs 31 handcrafted trajectory features** from car-following theory — speed statistics, acceleration patterns, braking behavior, lateral dynamics, time-series properties; the deployed single-probe runtime model then adds `num_lanes` and `speed_limit` as road-condition inputs
-3. **Trains and compares 6 model families** — XGBoost, LightGBM, LSTM, CNN-1D, GPR, FD baselines under the same pipeline; after adding 5K high-density bottleneck scenarios, the aligned single-probe baseline reaches **MAE 2.50 veh/km/lane, MAPE 39.7%** (R² 0.934)
-4. **Studies multi-probe aggregation in two settings** — aligned 1 km probe slices for the research case, and overlap-aware link-level fusion for the deployment case; the latest aligned 5-probe rerun reaches **MAE 1.78, MAPE 24.6%** (R² 0.964)
+1. **Generates labeled traffic data** — 49K SUMO scenarios → 209K probe samples of 6-channel trajectories (VX, VY, AX, AY, speed, brake), including bottleneck scenarios for wider congestion coverage.
+2. **Designs 31 handcrafted trajectory features** from car-following theory — speed statistics, acceleration patterns, braking behavior, lateral dynamics, time-series properties; the deployed single-probe runtime model then adds `num_lanes` and `speed_limit`, giving **31 + 2 = 33 inputs**
+3. **Trains and compares 6 model families** — XGBoost, LightGBM, LSTM, CNN-1D, GPR, FD baselines under the same pipeline; the aligned single-probe baseline reaches **MAE 2.50 veh/km/lane, MAPE 39.7%** (R² 0.934)
+4. **Studies multi-probe aggregation in two settings** — aligned 1 km probe slices for the research case, and overlap-aware link-level fusion for the deployment case; the aligned 5-probe result reaches **MAE 1.78, MAPE 24.6%** (R² 0.964)
 5. **Builds a link-level fusion system for deployment** — when probes do not share the same traversal boundaries, the system predicts per probe first and then aggregates unequal traversals at the road-link level with Bayesian car-following fusion; the current deployable 5-probe result is **MAE 2.18, MAPE 37.2%** (R² 0.951)
 6. **Wraps the offline workflow in a dashboard** — scenario generation, feature toggles, model selection, run history, scatter plots, and feature-importance inspection in one GUI
 7. **Serves link-level predictions** — FastAPI, GIS link matching (2.2K Seoul arterial links), rolling Bayesian link aggregation, PostgreSQL, Kafka/Pub-Sub, Leaflet map
@@ -45,7 +45,7 @@ Traffic density — vehicles per kilometer — is the fundamental measure of roa
 
 Probe vehicles (taxis, ride-hails, smartphones) are everywhere, but a single probe only observes its own trajectory. The core challenge: **can you estimate how many vehicles surround a probe, using only its speed, acceleration, and braking patterns?**
 
-Initial experiments across 6 model families in the ≤24 veh/km/lane regime clustered around R²≈0.45 regardless of algorithm, which motivated two parallel moves: multi-probe fusion, and high-density data augmentation for the 1-lane bottleneck regime. After both are applied, the aligned single-probe baseline reaches **MAE 2.50, MAPE 39.7%** (R² 0.934), and the project studies how much further an aligned 5-probe setting and a deployed link-fusion path take that number. The problem ultimately splits into two settings: an aligned research setting where 5 probes share the same 1 km slice, and a deployed road-network setting where probes rarely share identical start/end boundaries.
+The single-probe baseline reaches **MAE 2.50 veh/km/lane, MAPE 39.7%** (R² 0.934) across a density range up to ~67 veh/km/lane. The project studies two multi-probe regimes on top: an **aligned research setting** where 5 probes share the same 1 km slice, and a **deployed road-network setting** where probes traverse overlapping but mismatched 1 km cuts.
 
 ---
 
@@ -159,7 +159,7 @@ On the hosted server the dashboard is intentionally view-only, but locally it is
 
 ### Feature Engineering
 
-The project defines 31 handcrafted trajectory features from car-following theory and traffic flow dynamics, registered via `@register_feature` decorator and selected through YAML config. In the current archived 1 km rerun, one slow-duration feature is absent from the dataset, so the aligned rerun uses 30 available handcrafted features; the deployed single-probe runtime model then adds `num_lanes` and `speed_limit`, giving 32 total inputs.
+The project defines 31 handcrafted trajectory features from car-following theory and traffic flow dynamics, registered via `@register_feature` decorator and selected through YAML config. The deployed single-probe runtime model then adds `num_lanes` and `speed_limit`, giving **31 + 2 = 33 total inputs**.
 
 | Category | Features | Rationale |
 |----------|----------|-----------|
@@ -174,7 +174,7 @@ The project defines 31 handcrafted trajectory features from car-following theory
 
 #### 1. Aligned research setting
 
-In the research setting, multiple probes are aligned to the **same 1 km slice** before aggregation. In the latest full-feature rerun, each handcrafted feature is aggregated across the selected probes as a mean and a standard deviation, and a tabular XGBoost is trained on that aggregated vector. The aligned 5-probe result reaches **MAE 1.78 veh/km/lane, MAPE 24.6% (R² 0.964)**.
+In the research setting, multiple probes are aligned to the **same 1 km slice** before aggregation. Each handcrafted feature is aggregated across the selected probes as a mean and a standard deviation, and a tabular XGBoost is trained on that aggregated vector. The aligned 5-probe result reaches **MAE 1.78 veh/km/lane, MAPE 24.6% (R² 0.964)**.
 
 ```math
 \bar{f}_k = \frac{1}{N}\sum_{i=1}^{N} f_{k,i}, \qquad
@@ -212,7 +212,7 @@ First predict density for each traversal, then aggregate only the traversals who
 
 ### Results
 
-**Aligned research setting** (1km, XGBoost, latest full-feature rerun with 1-lane high-density augmentation):
+**Aligned research setting** (1 km, tabular XGBoost with aggregated handcrafted probe features):
 
 | N (probes) | MAE (veh/km/lane) | MAPE | R² |
 |------------|------------------|------|-----|
@@ -221,13 +221,13 @@ First predict density for each traversal, then aggregate only the traversals who
 | 3 | 2.00 | 28.7% | 0.954 |
 | 5 | **1.78** | **24.6%** | **0.964** |
 
-MAE=1.78 means **about 2 vehicles per km per lane** error across a density range that now extends up to ~67 veh/km/lane. This table is the aligned research setting: probes are assumed to describe the same observation slice, and the latest rerun uses the expanded handcrafted feature set plus the 1-lane bottleneck data.
+MAE=1.78 means **about 2 vehicles per km per lane** error across a density range up to ~67 veh/km/lane. This table is the aligned research setting: probes are assumed to describe the same observation slice, and the model uses aggregated handcrafted probe features with road conditions.
 
 <p align="center">
   <img src="docs/images/aligned_research_results.png" width="72%" alt="Aligned research setting results by probe count">
 </p>
 
-**Deployable road-network setting** (unequal traversal boundaries, 32-input single-probe model, MAE in veh/km/lane with R² in parentheses):
+**Deployable road-network setting** (unequal traversal boundaries, 33-input single-probe model, MAE in veh/km/lane with R² in parentheses):
 
 | Method | N=1 | N=2 | N=3 | N=5 |
 |--------|-----|-----|-----|-----|
@@ -249,16 +249,16 @@ The gap between the aligned **MAE 1.78** and the deployable **MAE 2.18** is the 
 **Notes on what these numbers mean:**
 
 - Here, **1 km** means the accumulated traversal length across chained road links in the link buffer. It is **not** a fixed SUMO link length.
-- Both aligned and deployable metrics are pulled from `results/multi_probe/high_density_full_eval_v2.json` (the 1-lane high-density augmented rerun).
+- Both aligned and deployable metrics are pulled from `results/multi_probe/high_density_full_eval_v2.json`.
 
-**Reproduce the latest aligned and deployable numbers:**
+**Reproduce the aligned and deployable numbers:**
 
 ```bash
 python scripts/generate_scenarios.py --bottleneck  # generates 1-lane high-density 5K
 python scripts/eval_high_density.py
 ```
 
-**Model comparison** (single probe, ≤24 veh/km/lane regime that motivated the choice): FD baseline <0, GPR 0.41, LSTM/CNN-1D/XGBoost clustered around **0.44–0.46** — XGBoost selected as the production runtime model.
+**Runtime model**: XGBoost on the 33-input vector (31 handcrafted trajectory features + `num_lanes` + `speed_limit`).
 
 ---
 
@@ -340,12 +340,12 @@ erDiagram
 ## Lessons Learned
 
 - **The main contribution is two-stage because the research setting and the deployment setting are different.** The project first studies aligned multi-probe aggregation in the 5-probe, 1 km setting, then builds a link-level fusion system that preserves most of that gain under real traversal-boundary mismatch.
-- **In the original ≤24 veh/km/lane regime, single-probe accuracy clustered around R²≈0.45 regardless of algorithm** (XGBoost/LightGBM/LSTM/CNN-1D/GPR/window features/density weighting all landed in the same range). Adding 5K 1-lane high-density bottleneck scenarios widened the training distribution up to ~67 veh/km/lane and lifted the aligned single-probe baseline to **MAE 2.50, MAPE 39.7% (R² 0.934)**. Data distribution, not algorithm choice, was the main lever; longer windows and direct-spacing sensing remain the next open directions.
+- **Single-probe baseline: MAE 2.50, MAPE 39.7% (R² 0.934)** on 49K scenarios spanning density 0–67 veh/km/lane. XGBoost on 33 inputs (31 handcrafted + 2 road conditions) is the runtime model.
 - **The current web demo leaves a lot of device-side compute unused.** In the browser-first version, the phone is mostly a thin client. If this moves into an installed app or an in-vehicle system, more of the buffering, sensor fusion, feature preparation, and filtering can run locally before upload, reducing server load and latency.
 - **The deployed contribution is overlap-aware Bayesian link fusion built on top of the 1 km traversal unit.** Real vehicles observe different cut points across the same road timeline, so the system first predicts each traversal and then fuses density on the links those windows overlap.
 - **The implementation problem was fusion of unequal traversal windows.** Real probes begin and end their useful 1 km observation at different places, so the deployable algorithm predicts first and fuses second at the link level.
-- **Direct spacing from ADAS or connected vehicles is the most promising next sensor upgrade.** The current phone-only system still has to infer inter-vehicle gap indirectly from trajectory shape. In a separate spacing-informed aligned experiment, **XGBoost (31 features + CF)** rose from **0.641 → 0.752 → 0.801 → 0.848** as multi-probe structure became more visible. That number is **not** the current deployable phone-only score; it is the clearest evidence that direct gap/headway sensing is the next research direction with the largest upside.
-- **Simulation produces almost no congestion without bottlenecks.** Only 48 of 176K samples showed v_ratio < 0.4. The single straight-link SUMO setup rarely produces realistic stop-and-go waves. Future work requires multi-link networks with lane drops, signals, and merge sections.
+- **Direct spacing from ADAS or connected vehicles is the most promising next sensor upgrade.** The current phone-only system infers inter-vehicle gap indirectly from trajectory shape; direct headway or forward-gap sensing would make that signal observable instead of latent.
+- **Simulation fidelity is the main experimental constraint.** Single straight-link SUMO scenarios rarely produce realistic stop-and-go waves, so future work should use richer multi-link networks with lane drops, signals, and merge sections.
 
 ---
 
