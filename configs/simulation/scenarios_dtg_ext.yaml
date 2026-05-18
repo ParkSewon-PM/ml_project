@@ -46,3 +46,9 @@ output:
   scenarios_csv: data/scenarios_dtg_ext_all.csv
   fcd_dir: data/fcd_dtg_ext/
   features_dir: data/features/
+
+data:
+  tabular_path: data/features/dataset_dtg_ext.parquet
+  timeseries_path: data/features/timeseries_dtg_ext.npz
+  metadata_path: data/features/metadata_dtg_ext.parquet
+  seq_len: 300
