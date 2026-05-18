@@ -43,6 +43,6 @@ scenarios:
   num_simulations: 4000
 
 output:
-  scenarios_csv: data/scenarios_dtg_lanes45.csv
-  fcd_dir: data/fcd_dtg_lanes45/
+  scenarios_csv: data/scenarios_dtg_ext_all.csv
+  fcd_dir: data/fcd_dtg_ext/
   features_dir: data/features/
