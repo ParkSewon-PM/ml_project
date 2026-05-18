@@ -12,6 +12,7 @@ from typing import Any
 import pandas as pd
 
 from src.simulation.network_builder import (
+    build_bottleneck_network,
     build_route_file,
     build_single_link_network,
 )
@@ -33,12 +34,31 @@ def _run_single_scenario(
     net_dir.mkdir(parents=True, exist_ok=True)
 
     try:
-        net_file = build_single_link_network(
-            net_dir / "network",
-            link_length=row_dict["link_length"],
-            num_lanes=int(row_dict["num_lanes"]),
-            speed_limit=row_dict["speed_limit"],
-        )
+        is_bottleneck = bool(row_dict.get("bottleneck", False))
+        num_lanes = int(row_dict["num_lanes"])
+
+        if is_bottleneck:
+            bottleneck_lanes = int(row_dict.get("bottleneck_lanes", max(1, num_lanes - 1)))
+            bn_speed = row_dict.get("bottleneck_speed")
+            if bn_speed is not None and not (isinstance(bn_speed, float) and bn_speed != bn_speed):
+                bn_speed = float(bn_speed)
+            else:
+                bn_speed = None
+            net_file = build_bottleneck_network(
+                net_dir / "network",
+                link_length=row_dict["link_length"],
+                num_lanes=num_lanes,
+                bottleneck_lanes=bottleneck_lanes,
+                speed_limit=row_dict["speed_limit"],
+                bottleneck_speed=bn_speed,
+            )
+        else:
+            net_file = build_single_link_network(
+                net_dir / "network",
+                link_length=row_dict["link_length"],
+                num_lanes=num_lanes,
+                speed_limit=row_dict["speed_limit"],
+            )
 
         # Extract vehicle type params from scenario row
         pass_params = {}
@@ -62,6 +82,7 @@ def _run_single_scenario(
             passenger_params=pass_params,
             truck_params=truck_params,
             speed_limit=row_dict["speed_limit"],
+            bottleneck=is_bottleneck,
         )
 
         fcd_out = net_dir / "fcd.csv"

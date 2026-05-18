@@ -43,6 +43,7 @@ def generate_scenario_matrix(
     num_simulations: int = 10000,
     base_seed: int = 42,
     start_id: int = 0,
+    bottleneck: bool = False,
 ) -> pd.DataFrame:
     """Generate stochastic scenario matrix by sampling from config distributions.
 
@@ -55,6 +56,11 @@ def generate_scenario_matrix(
     start_id:
         Starting scenario_id. Use to append new scenarios without
         overwriting existing ones (e.g. start_id=20000).
+    bottleneck:
+        If True, each scenario gets a lane-drop bottleneck downstream
+        of the measurement link (num_lanes → num_lanes - 1).  Demand
+        cap is raised to 200% of theoretical capacity to ensure
+        queue spillback produces high-density states on link0.
     """
     rng = np.random.RandomState(base_seed)
 
@@ -85,8 +91,10 @@ def generate_scenario_matrix(
     truck_cfg = vtype_cfg.get("truck", {})
 
     records = []
-    for i in range(num_simulations):
+    i = 0
+    while len(records) < num_simulations:
         seed = base_seed + i
+        i += 1
 
         # Sample num_lanes — always use discrete randint for integer params
         num_lanes = int(rng.randint(lanes_min, lanes_max + 1))
@@ -103,14 +111,15 @@ def generate_scenario_matrix(
         pass_params = _sample_vehicle_params(rng, passenger_cfg)
         truck_params = _sample_vehicle_params(rng, truck_cfg)
 
-        # Clip per-lane demand to 150% of theoretical Krauss capacity
-        # Allowing demand > capacity triggers congestion at the entry,
-        # producing higher-density scenarios needed for ML training.
+        # Clip per-lane demand to capacity multiplier.
+        # Bottleneck scenarios use 200% to push more vehicles into the
+        # queue upstream of the lane drop; normal scenarios use 150%.
         tau = pass_params.get("tau", 1.45)
         veh_length = pass_params.get("length", 4.5)
         min_gap = pass_params.get("minGap", 2.5)
         theoretical_cap = 3600.0 / (tau + (veh_length + min_gap) / speed_limit)
-        per_lane_demand = min(per_lane_demand, int(theoretical_cap * 1.5))
+        cap_mult = 2.0 if bottleneck else 1.5
+        per_lane_demand = min(per_lane_demand, int(theoretical_cap * cap_mult))
 
         demand_vehph = per_lane_demand * num_lanes
 
@@ -128,8 +137,13 @@ def generate_scenario_matrix(
             )[0]
         )
 
+        # 1차로는 레인드랍 불가 → bottleneck 시나리오에서 제외
+        if bottleneck and num_lanes < 2:
+            continue
+        bottleneck_lanes = max(1, num_lanes - 1) if bottleneck else 0
+
         row: dict[str, Any] = {
-            "scenario_id": start_id + i,
+            "scenario_id": start_id + len(records),
             "seed": seed,
             "num_lanes": num_lanes,
             "speed_limit_kmh": speed_limit_kmh,
@@ -137,6 +151,8 @@ def generate_scenario_matrix(
             "link_length": link_length,
             "demand_vehph": demand_vehph,
             "truck_ratio": round(truck_ratio, 4),
+            "bottleneck": bottleneck,
+            "bottleneck_lanes": bottleneck_lanes,
         }
         for k, v in pass_params.items():
             row[f"passenger_{k}"] = round(v, 4)

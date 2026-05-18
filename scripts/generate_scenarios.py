@@ -40,6 +40,11 @@ def main() -> None:
         action="store_true",
         help="Append to existing scenarios CSV instead of overwriting",
     )
+    parser.add_argument(
+        "--bottleneck",
+        action="store_true",
+        help="Generate lane-drop bottleneck scenarios for high-density states",
+    )
     args = parser.parse_args()
 
     cfg = load_config(args.config)
@@ -53,6 +58,7 @@ def main() -> None:
         num_simulations=num_simulations,
         base_seed=args.base_seed,
         start_id=args.start_id,
+        bottleneck=args.bottleneck,
     )
 
     output = args.output or cfg.get("output", {}).get("scenarios_csv", "data/scenarios.csv")

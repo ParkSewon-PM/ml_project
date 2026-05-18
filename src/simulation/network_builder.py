@@ -105,6 +105,105 @@ def _add_vtype(
     ET.SubElement(parent, "vType", **attrs)
 
 
+def build_bottleneck_network(
+    output_path: str | Path,
+    link_length: float = 5000.0,
+    num_lanes: int = 3,
+    bottleneck_lanes: int | None = None,
+    bottleneck_length: float = 500.0,
+    speed_limit: float = 33.33,
+    bottleneck_speed: float | None = None,
+) -> Path:
+    """Create a SUMO network with a lane-drop bottleneck.
+
+    Layout::
+
+        [start] --link0 (num_lanes)--> [mid] --link1 (bottleneck_lanes)--> [end]
+
+    Measurement and probe extraction happen on ``link0`` only.
+    ``link1`` exists solely to create queue spillback into ``link0``.
+
+    Parameters
+    ----------
+    bottleneck_lanes:
+        Number of lanes on the downstream link.  Defaults to
+        ``num_lanes - 1`` (single lane drop).
+    bottleneck_length:
+        Length of the bottleneck link in meters.  Only needs to be long
+        enough to sustain the capacity drop; 500 m is usually sufficient.
+    bottleneck_speed:
+        Speed limit on the bottleneck link (m/s).  Defaults to same as
+        ``speed_limit``.  Set lower to reduce bottleneck throughput and
+        force higher density on the measurement link.
+    """
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if bottleneck_lanes is None:
+        bottleneck_lanes = max(1, num_lanes - 1)
+    if bottleneck_speed is None:
+        bottleneck_speed = speed_limit
+
+    # Nodes
+    nodes = ET.Element("nodes")
+    ET.SubElement(nodes, "node", id="start", x="0.0", y="0.0", type="priority")
+    ET.SubElement(nodes, "node", id="mid", x=str(link_length), y="0.0", type="priority")
+    ET.SubElement(
+        nodes,
+        "node",
+        id="end",
+        x=str(link_length + bottleneck_length),
+        y="0.0",
+        type="priority",
+    )
+
+    nodes_path = output_path.with_suffix(".nod.xml")
+    ET.ElementTree(nodes).write(str(nodes_path), xml_declaration=True, encoding="UTF-8")
+
+    # Edges
+    edges = ET.Element("edges")
+    ET.SubElement(
+        edges,
+        "edge",
+        id="link0",
+        **{"from": "start", "to": "mid"},
+        numLanes=str(num_lanes),
+        speed=str(speed_limit),
+    )
+    ET.SubElement(
+        edges,
+        "edge",
+        id="link1",
+        **{"from": "mid", "to": "end"},
+        numLanes=str(bottleneck_lanes),
+        speed=str(bottleneck_speed),
+    )
+
+    edges_path = output_path.with_suffix(".edg.xml")
+    ET.ElementTree(edges).write(str(edges_path), xml_declaration=True, encoding="UTF-8")
+
+    # Run netconvert
+    net_path = output_path.parent / "network.net.xml"
+    netconvert_bin = _resolve_sumo_tool("netconvert")
+    result = subprocess.run(
+        [
+            netconvert_bin,
+            "--node-files",
+            str(nodes_path),
+            "--edge-files",
+            str(edges_path),
+            "--output-file",
+            str(net_path),
+        ],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"netconvert failed (exit {result.returncode}): {result.stderr.strip()}")
+
+    return net_path
+
+
 def build_route_file(
     output_path: str | Path,
     demand_vehph: int = 1000,
@@ -114,8 +213,9 @@ def build_route_file(
     passenger_params: dict[str, float] | None = None,
     truck_params: dict[str, float] | None = None,
     speed_limit: float = 33.33,
+    bottleneck: bool = False,
 ) -> Path:
-    """Create a SUMO route file with passenger/truck flows on link0.
+    """Create a SUMO route file with passenger/truck flows.
 
     Args:
         demand_vehph: Total demand (veh/hr).
@@ -123,6 +223,7 @@ def build_route_file(
         passenger_params: Vehicle type params for passenger cars.
         truck_params: Vehicle type params for trucks.
         speed_limit: Speed limit (m/s) for maxSpeed.
+        bottleneck: If True, route spans "link0 link1" (for bottleneck network).
     """
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -137,7 +238,8 @@ def build_route_file(
         _add_vtype(routes, "truck", truck_params, max_speed=speed_limit)
 
     # Route
-    ET.SubElement(routes, "route", id="r0", edges="link0")
+    route_edges = "link0 link1" if bottleneck else "link0"
+    ET.SubElement(routes, "route", id="r0", edges=route_edges)
 
     # Passenger flow
     passenger_demand = max(1, int(demand_vehph * (1 - truck_ratio)))
